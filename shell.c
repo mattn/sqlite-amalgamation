@@ -4057,6 +4057,12 @@ int main(int argc, char **argv){
   main_init(&data);
   stdin_is_interactive = isatty(0);
 
+#ifdef _WIN32
+  for (i = 1; i < argc; i++){
+    argv[i] = utf8_from_locale_alloc(argv[i], NULL);
+  }
+#endif
+
   /* Make sure we have a valid signal handler early, before anything
   ** else is done.
   */
@@ -4358,5 +4364,12 @@ int main(int argc, char **argv){
     sqlite3_close(data.db);
   }
   sqlite3_free(data.zFreeOnClose); 
+
+#ifdef _WIN32
+  for (i = 1; i < argc; i++){
+    free(argv[i]);
+  }
+#endif
+
   return rc;
 }
