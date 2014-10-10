@@ -81,8 +81,10 @@ static char* utf8_from_locale_alloc(const char* str, size_t* plen){
   return pmbs;
 }
 
+static int stdout_is_interactive = 1;
+
 static int utf8_vfprintf(FILE *fp, const char *fmt, va_list args){
-  if (isatty(fileno(stdout)) && fp == stdout) {
+  if (stdout_is_interactive && fp == stdout) {
     char *p = NULL, *u8;
     int r;
     r = vasprintf(&p, fmt, args);
@@ -4293,6 +4295,8 @@ int main(int argc, char **argv){
       return 1;
     }
   }
+
+  stdout_is_interactive = isatty(fileno(stdout));
 
   if( zFirstCmd ){
     /* Run just the command that follows the database name
