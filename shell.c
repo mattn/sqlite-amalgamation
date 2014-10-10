@@ -48,17 +48,19 @@ static char* utf8_to_locale_alloc(const char* str, size_t* plen){
   int len = plen ? *plen : strlen(str);
   size_t pwcl = MultiByteToWideChar(cp, 0, str, len,  NULL, 0);
   wchar_t* pwcs = (wchar_t*) malloc(sizeof(wchar_t) * (pwcl + 1));
-  if (pwcs == NULL) return NULL;
+  if( pwcs == NULL ) return NULL;
   pwcl = MultiByteToWideChar(cp, 0, str, len, pwcs, pwcl);
   pwcs[pwcl] = 0;
   cp = GetACP();
   size_t pmbl = WideCharToMultiByte(cp, 0, (LPCWSTR) pwcs, pwcl, NULL, 0, NULL, NULL);
   char* pmbs = (char*) malloc(sizeof(char) * (pmbl + 1));
-  if (pmbs == NULL) return NULL;
+  if( pmbs == NULL ) return NULL;
   pmbl = WideCharToMultiByte(cp, 0, (LPCWSTR) pwcs, pwcl, pmbs, pmbl, NULL, NULL);
   pmbs[pmbl] = 0;
   free(pwcs);
-  if (plen) *plen = pmbl;
+  if( plen ){
+    *plen = pmbl;
+  }
   return pmbs;
 }
 
@@ -67,17 +69,19 @@ static char* utf8_from_locale_alloc(const char* str, size_t* plen){
   int len = plen ? *plen : strlen(str);
   size_t pwcl = MultiByteToWideChar(cp, 0, str, len,  NULL, 0);
   wchar_t* pwcs = (wchar_t*) malloc(sizeof(wchar_t) * (pwcl + 1));
-  if (pwcs == NULL) return NULL;
+  if( pwcs == NULL ) return NULL;
   pwcl = MultiByteToWideChar(cp, 0, str, len, pwcs, pwcl);
   pwcs[pwcl] = 0;
   cp = CP_UTF8;
   size_t pmbl = WideCharToMultiByte(cp, 0, pwcs, pwcl, NULL, 0, NULL, NULL);
   char* pmbs = (char*) malloc(sizeof(char) * (pmbl + 1));
-  if (pmbs == NULL) return NULL;
+  if( pmbs == NULL ) return NULL;
   pmbl = WideCharToMultiByte(cp, 0, pwcs, pwcl, pmbs, pmbl, NULL, NULL);
   pmbs[pmbl] = 0;
   free(pwcs);
-  if (plen) *plen = pmbl;
+  if( plen ){
+    *plen = pmbl;
+  }
   return pmbs;
 }
 
@@ -90,7 +94,7 @@ static int utf8_vfprintf(FILE *fp, const char *fmt, va_list args){
     r = vasprintf(&p, fmt, args);
     if (!p) return;
     u8 = utf8_to_locale_alloc(p, &r);
-    if (u8) {
+    if( u8 ){
       r = fwrite(u8, r, 1, fp);
       free(u8);
       return r;
@@ -467,6 +471,9 @@ static void shellstaticFunc(
 static char *local_getline(char *zLine, FILE *in){
   int nLine = zLine==0 ? 0 : 100;
   int n = 0;
+#ifdef _WIN32
+  char* zLineOld = zLine;
+#endif
 
   while( 1 ){
     if( n+100>nLine ){
@@ -494,8 +501,10 @@ static char *local_getline(char *zLine, FILE *in){
   if (stdin_is_interactive){
     char *u8;
     u8 = utf8_from_locale_alloc(zLine, &n);
-    if (u8) {
-      free(zLine);
+    if(u8) {
+      if( zLineOld != NULL && zLineOld != zLine ){
+        free(zLine);
+      }
       zLine = u8;
     }
   }
