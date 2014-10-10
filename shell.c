@@ -498,10 +498,10 @@ static char *local_getline(char *zLine, FILE *in){
     }
   }
 #ifdef _WIN32
-  if (stdin_is_interactive){
+  if( stdin_is_interactive ){
     char *u8;
     u8 = utf8_from_locale_alloc(zLine, &n);
-    if(u8) {
+    if( u8 ) {
       if( zLineOld != NULL && zLineOld != zLine ){
         free(zLine);
       }
