@@ -49,14 +49,14 @@ static char* utf8_to_locale_alloc(const char* str, size_t* plen){
   size_t pwcl = MultiByteToWideChar(cp, 0, str, len,  NULL, 0);
   wchar_t* pwcs = (wchar_t*) malloc(sizeof(wchar_t) * (pwcl + 1));
   if( pwcs == NULL ) return NULL;
+  ZeroMemory(pwcs, sizeof(wchar_t) * (pwcl + 1));
   pwcl = MultiByteToWideChar(cp, 0, str, len, pwcs, pwcl);
-  pwcs[pwcl] = 0;
   cp = GetACP();
   size_t pmbl = WideCharToMultiByte(cp, 0, (LPCWSTR) pwcs, pwcl, NULL, 0, NULL, NULL);
   char* pmbs = (char*) malloc(sizeof(char) * (pmbl + 1));
   if( pmbs == NULL ) return NULL;
+  ZeroMemory(pmbs, sizeof(char) * (pmbl + 1));
   pmbl = WideCharToMultiByte(cp, 0, (LPCWSTR) pwcs, pwcl, pmbs, pmbl, NULL, NULL);
-  pmbs[pmbl] = 0;
   free(pwcs);
   if( plen ){
     *plen = pmbl;
@@ -66,18 +66,18 @@ static char* utf8_to_locale_alloc(const char* str, size_t* plen){
 
 static char* utf8_from_locale_alloc(const char* str, size_t* plen){
   UINT cp = GetACP();
-  int len = plen ? *plen : strlen(str);
+  size_t len = plen ? *plen : strlen(str);
   size_t pwcl = MultiByteToWideChar(cp, 0, str, len,  NULL, 0);
   wchar_t* pwcs = (wchar_t*) malloc(sizeof(wchar_t) * (pwcl + 1));
   if( pwcs == NULL ) return NULL;
+  ZeroMemory(pwcs, sizeof(wchar_t) * (pwcl + 1));
   pwcl = MultiByteToWideChar(cp, 0, str, len, pwcs, pwcl);
-  pwcs[pwcl] = 0;
   cp = CP_UTF8;
   size_t pmbl = WideCharToMultiByte(cp, 0, pwcs, pwcl, NULL, 0, NULL, NULL);
   char* pmbs = (char*) malloc(sizeof(char) * (pmbl + 1));
   if( pmbs == NULL ) return NULL;
+  ZeroMemory(pmbs, sizeof(char) * (pmbl + 1));
   pmbl = WideCharToMultiByte(cp, 0, pwcs, pwcl, pmbs, pmbl, NULL, NULL);
-  pmbs[pmbl] = 0;
   free(pwcs);
   if( plen ){
     *plen = pmbl;
@@ -88,7 +88,7 @@ static char* utf8_from_locale_alloc(const char* str, size_t* plen){
 static int stdout_is_interactive = 1;
 
 static int utf8_vfprintf(FILE *fp, const char *fmt, va_list args){
-  if (stdout_is_interactive && fp == stdout) {
+  if (stdout_is_interactive) {
     char *p = NULL, *u8;
     int r;
     r = vasprintf(&p, fmt, args);
@@ -500,7 +500,7 @@ static char *local_getline(char *zLine, FILE *in){
 #ifdef _WIN32
   if( stdin_is_interactive ){
     char *u8;
-    u8 = utf8_from_locale_alloc(zLine, &n);
+    u8 = utf8_from_locale_alloc(zLine, NULL);
     if( u8 ) {
       if( zLineOld != NULL && zLineOld != zLine ){
         free(zLine);
