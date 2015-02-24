@@ -93,6 +93,100 @@ extern FILE *popen(const char*,const char*);
 extern int pclose(FILE*);
 #endif
 
+#if defined(_WIN32) || defined(WIN32)
+#include <windows.h>
+static char* utf8_to_locale_alloc(const char* str, size_t* plen){
+  UINT cp = CP_UTF8;
+  int len = plen ? *plen : strlen(str);
+  size_t pwcl = MultiByteToWideChar(cp, 0, str, len,  NULL, 0);
+  wchar_t* pwcs = (wchar_t*) malloc(sizeof(wchar_t) * (pwcl + 1));
+  if( pwcs == NULL ) return NULL;
+  ZeroMemory(pwcs, sizeof(wchar_t) * (pwcl + 1));
+  pwcl = MultiByteToWideChar(cp, 0, str, len, pwcs, pwcl);
+  cp = GetACP();
+  size_t pmbl = WideCharToMultiByte(cp, 0, (LPCWSTR) pwcs, pwcl, NULL, 0, NULL, NULL);
+  char* pmbs = (char*) malloc(sizeof(char) * (pmbl + 1));
+  if( pmbs == NULL ) return NULL;
+  ZeroMemory(pmbs, sizeof(char) * (pmbl + 1));
+  pmbl = WideCharToMultiByte(cp, 0, (LPCWSTR) pwcs, pwcl, pmbs, pmbl, NULL, NULL);
+  free(pwcs);
+  if( plen ){
+    *plen = pmbl;
+  }
+  return pmbs;
+}
+
+static char* utf8_from_locale_alloc(const char* str, size_t* plen){
+  UINT cp = GetACP();
+  size_t len = plen ? *plen : strlen(str);
+  size_t pwcl = MultiByteToWideChar(cp, 0, str, len,  NULL, 0);
+  wchar_t* pwcs = (wchar_t*) malloc(sizeof(wchar_t) * (pwcl + 1));
+  if( pwcs == NULL ) return NULL;
+  ZeroMemory(pwcs, sizeof(wchar_t) * (pwcl + 1));
+  pwcl = MultiByteToWideChar(cp, 0, str, len, pwcs, pwcl);
+  cp = CP_UTF8;
+  size_t pmbl = WideCharToMultiByte(cp, 0, pwcs, pwcl, NULL, 0, NULL, NULL);
+  char* pmbs = (char*) malloc(sizeof(char) * (pmbl + 1));
+  if( pmbs == NULL ) return NULL;
+  ZeroMemory(pmbs, sizeof(char) * (pmbl + 1));
+  pmbl = WideCharToMultiByte(cp, 0, pwcs, pwcl, pmbs, pmbl, NULL, NULL);
+  free(pwcs);
+  if( plen ){
+    *plen = pmbl;
+  }
+  return pmbs;
+}
+
+static int stdout_is_interactive = 1;
+
+static int utf8_vfprintf(FILE *fp, const char *fmt, va_list args){
+  if (stdout_is_interactive) {
+    char *p = NULL, *u8;
+    int r;
+    r = vasprintf(&p, fmt, args);
+    if (!p) return;
+    u8 = utf8_to_locale_alloc(p, &r);
+    if( u8 ){
+      r = fwrite(u8, r, 1, fp);
+      free(u8);
+      return r;
+    }
+  }
+  return vfprintf(fp, fmt, args);
+}
+
+static int utf8_fprintf(FILE *fp, const char *fmt, ...){
+  int r;
+  va_list args;
+  va_start(args, fmt);
+  r = utf8_vfprintf(fp, fmt, args);
+  va_end(args);
+  return r;
+}
+
+static int utf8_printf(const char *fmt, ...){
+  int r;
+  va_list args;
+  va_start(args, fmt);
+  r = utf8_vfprintf(stdout, fmt, args);
+  va_end(args);
+  return r;
+}
+
+static int utf8_fputs(const char* str, FILE* fp) {
+  return utf8_fprintf(fp, "%s\n", str);
+}
+
+#undef vfprintf
+#undef fprintf
+#undef printf
+#undef fputs
+#define vfprintf(...) utf8_vfprintf(__VA_ARGS__)
+#define fprintf(...) utf8_fprintf(__VA_ARGS__)
+#define printf(...) utf8_printf(__VA_ARGS__)
+#define fputs(s, fp) utf8_fputs(s, fp)
+#endif
+
 #if defined(_WIN32_WCE)
 /* Windows CE (arm-wince-mingw32ce-gcc) does not provide isatty()
  * thus we always assume that we have a console. That can be
@@ -4179,6 +4273,13 @@ int main(int argc, char **argv){
   Argv0 = argv[0];
   main_init(&data);
   stdin_is_interactive = isatty(0);
+#ifdef _WIN32
+  if( stdin_is_interactive ){
+    for (i = 1; i < argc; i++){
+      argv[i] = utf8_from_locale_alloc(argv[i], NULL);
+    }
+  }
+#endif
 
   /* Make sure we have a valid signal handler early, before anything
   ** else is done.
@@ -4506,5 +4607,12 @@ int main(int argc, char **argv){
     sqlite3_close(data.db);
   }
   sqlite3_free(data.zFreeOnClose); 
+
+#ifdef _WIN32
+  for (i = 1; i < argc; i++){
+    free(argv[i]);
+  }
+#endif
+
   return rc;
 }
