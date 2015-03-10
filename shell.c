@@ -97,18 +97,18 @@ extern int pclose(FILE*);
 #include <windows.h>
 static char* utf8_to_locale_alloc(const char* str, size_t* plen){
   UINT cp = CP_UTF8;
-  int len = plen ? *plen : strlen(str);
+  int len = plen ? *plen : -1;
   size_t pwcl = MultiByteToWideChar(cp, 0, str, len,  NULL, 0);
   wchar_t* pwcs = (wchar_t*) malloc(sizeof(wchar_t) * (pwcl + 1));
   if( pwcs == NULL ) return NULL;
   ZeroMemory(pwcs, sizeof(wchar_t) * (pwcl + 1));
   pwcl = MultiByteToWideChar(cp, 0, str, len, pwcs, pwcl);
   cp = GetACP();
-  size_t pmbl = WideCharToMultiByte(cp, 0, (LPCWSTR) pwcs, pwcl, NULL, 0, NULL, NULL);
+  size_t pmbl = WideCharToMultiByte(cp, 0, (LPCWSTR) pwcs, pwcl, 0, 0, 0, 0);
   char* pmbs = (char*) malloc(sizeof(char) * (pmbl + 1));
   if( pmbs == NULL ) return NULL;
   ZeroMemory(pmbs, sizeof(char) * (pmbl + 1));
-  pmbl = WideCharToMultiByte(cp, 0, (LPCWSTR) pwcs, pwcl, pmbs, pmbl, NULL, NULL);
+  pmbl = WideCharToMultiByte(cp, 0, (LPCWSTR) pwcs, pwcl, pmbs, pmbl, 0, 0);
   free(pwcs);
   if( plen ){
     *plen = pmbl;
@@ -118,18 +118,18 @@ static char* utf8_to_locale_alloc(const char* str, size_t* plen){
 
 static char* utf8_from_locale_alloc(const char* str, size_t* plen){
   UINT cp = GetACP();
-  size_t len = plen ? *plen : strlen(str);
+  size_t len = plen ? *plen : -1;
   size_t pwcl = MultiByteToWideChar(cp, 0, str, len,  NULL, 0);
   wchar_t* pwcs = (wchar_t*) malloc(sizeof(wchar_t) * (pwcl + 1));
   if( pwcs == NULL ) return NULL;
   ZeroMemory(pwcs, sizeof(wchar_t) * (pwcl + 1));
   pwcl = MultiByteToWideChar(cp, 0, str, len, pwcs, pwcl);
   cp = CP_UTF8;
-  size_t pmbl = WideCharToMultiByte(cp, 0, pwcs, pwcl, NULL, 0, NULL, NULL);
+  size_t pmbl = WideCharToMultiByte(cp, 0, pwcs, pwcl, 0, 0, 0, 0);
   char* pmbs = (char*) malloc(sizeof(char) * (pmbl + 1));
   if( pmbs == NULL ) return NULL;
   ZeroMemory(pmbs, sizeof(char) * (pmbl + 1));
-  pmbl = WideCharToMultiByte(cp, 0, pwcs, pwcl, pmbs, pmbl, NULL, NULL);
+  pmbl = WideCharToMultiByte(cp, 0, pwcs, pwcl, pmbs, pmbl, 0, 0);
   free(pwcs);
   if( plen ){
     *plen = pmbl;
