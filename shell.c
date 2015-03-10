@@ -478,6 +478,9 @@ static void shellstaticFunc(
 static char *local_getline(char *zLine, FILE *in){
   int nLine = zLine==0 ? 0 : 100;
   int n = 0;
+#ifdef _WIN32
+  char* zLineOld = zLine;
+#endif
 
   while( 1 ){
     if( n+100>nLine ){
@@ -501,6 +504,18 @@ static char *local_getline(char *zLine, FILE *in){
       break;
     }
   }
+#ifdef _WIN32
+  if( stdin_is_interactive ){
+    char *u8;
+    u8 = utf8_from_locale_alloc(zLine, NULL);
+    if( u8 ) {
+      if( zLineOld != NULL && zLineOld != zLine ){
+        free(zLine);
+      }
+      zLine = u8;
+    }
+  }
+#endif
   return zLine;
 }
 
