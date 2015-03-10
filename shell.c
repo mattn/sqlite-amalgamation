@@ -98,42 +98,38 @@ extern int pclose(FILE*);
 static char* utf8_to_locale_alloc(const char* str, size_t* plen){
   UINT cp = CP_UTF8;
   int len = plen ? *plen : -1;
-  size_t pwcl = MultiByteToWideChar(cp, 0, str, len,  NULL, 0);
+  size_t pwcl = MultiByteToWideChar(cp, 0, str, len, 0, 0);
   wchar_t* pwcs = (wchar_t*) malloc(sizeof(wchar_t) * (pwcl + 1));
-  if( pwcs == NULL ) return NULL;
+  if( pwcs==0 ) return 0;
   ZeroMemory(pwcs, sizeof(wchar_t) * (pwcl + 1));
   pwcl = MultiByteToWideChar(cp, 0, str, len, pwcs, pwcl);
   cp = GetACP();
   size_t pmbl = WideCharToMultiByte(cp, 0, (LPCWSTR) pwcs, pwcl, 0, 0, 0, 0);
   char* pmbs = (char*) malloc(sizeof(char) * (pmbl + 1));
-  if( pmbs == NULL ) return NULL;
+  if( pmbs==0 ) return 0;
   ZeroMemory(pmbs, sizeof(char) * (pmbl + 1));
   pmbl = WideCharToMultiByte(cp, 0, (LPCWSTR) pwcs, pwcl, pmbs, pmbl, 0, 0);
   free(pwcs);
-  if( plen ){
-    *plen = pmbl;
-  }
+  if( plen ) *plen = pmbl;
   return pmbs;
 }
 
 static char* utf8_from_locale_alloc(const char* str, size_t* plen){
   UINT cp = GetACP();
   size_t len = plen ? *plen : -1;
-  size_t pwcl = MultiByteToWideChar(cp, 0, str, len,  NULL, 0);
+  size_t pwcl = MultiByteToWideChar(cp, 0, str, len, 0, 0);
   wchar_t* pwcs = (wchar_t*) malloc(sizeof(wchar_t) * (pwcl + 1));
-  if( pwcs == NULL ) return NULL;
+  if( pwcs==0 ) return 0;
   ZeroMemory(pwcs, sizeof(wchar_t) * (pwcl + 1));
   pwcl = MultiByteToWideChar(cp, 0, str, len, pwcs, pwcl);
   cp = CP_UTF8;
   size_t pmbl = WideCharToMultiByte(cp, 0, pwcs, pwcl, 0, 0, 0, 0);
   char* pmbs = (char*) malloc(sizeof(char) * (pmbl + 1));
-  if( pmbs == NULL ) return NULL;
+  if( pmbs==0 ) return 0;
   ZeroMemory(pmbs, sizeof(char) * (pmbl + 1));
   pmbl = WideCharToMultiByte(cp, 0, pwcs, pwcl, pmbs, pmbl, 0, 0);
   free(pwcs);
-  if( plen ){
-    *plen = pmbl;
-  }
+  if( plen ) *plen = pmbl;
   return pmbs;
 }
 
@@ -493,7 +489,7 @@ static char *local_getline(char *zLine, FILE *in){
       zLine[n] = 0;
       break;
     }
-    while( zLine[n] ) n++;
+    while( n < nLine && zLine[n] ) n++;
     if( n>0 && zLine[n-1]=='\n' ){
       n--;
       if( n>0 && zLine[n-1]=='\r' ) n--;
